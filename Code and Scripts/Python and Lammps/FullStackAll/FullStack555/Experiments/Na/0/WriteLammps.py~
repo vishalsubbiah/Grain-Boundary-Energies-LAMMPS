@@ -1,0 +1,138 @@
+import shutil
+
+def write_lammps(M1,M2,potential,element,temp,tempDamp,theta):
+    
+    x1=[int(M1[0][0]),int(M1[0][1]),int(M1[0][2])]
+    y1=[int(M1[1][0]),int(M1[1][1]),int(M1[1][2])]
+    z1=[int(M1[2][0]),int(M1[2][1]),int(M1[2][2])]
+    
+    x2=[int(M2[0][0]),int(M2[0][1]),int(M2[0][2])]
+    y2=[int(M2[1][0]),int(M2[1][1]),int(M2[1][2])]
+    z2=[int(M2[2][0]),int(M2[2][1]),int(M2[2][2])]
+    
+    shutil.copy('../../Potentials/'+str(potential),'.')
+    
+    LammpsInFile=open('GB.in','w')
+    
+    ContentComment="""# LAMMPS Input File for Grain Boundaries 
+# Mark Tschopp, Dec2009 
+# This file will generate a single Sigma5(310) STGB \n"""
+    
+    ContentInitSim="""\n # ---------- Initialize Simulation --------------------- 
+clear 
+units metal 
+dimension 3 
+boundary p p p 
+atom_style atomic \n"""
+
+    ContentAtomStruct1="""\n # ---------- Create Atomistic Structure --------------------- 
+lattice fcc 4.05 
+region	whole block -5 5 -5 5 -5 5 units lattice
+create_box 2 whole 
+region upper block INF INF 0.000000 64.0361225 INF INF units box 
+
+lattice fcc 4.05 orient x """ +str(x1[0])+" " + str(x1[1]) + " " + str(x1[2]) +""" orient y  """+ str(y1[0])+" " + str(y1[1]) + " " + str(y1[2]) +""" orient z """ +str(z1[0])+" " + str(z1[1]) + " " + str(z1[2]) +"""\n""" 
+
+
+    ContentAtomStruct2="""\n create_atoms 1 region upper 
+region lower block INF INF -64.0361225 0.000000 INF INF units box 
+lattice fcc 4.05 orient x """ +str(x2[0])+" " + str(x2[1]) + " " + str(x2[2]) +""" orient y  """+ str(y2[0])+" " + str(y2[1]) + " " + str(y2[2]) +""" orient z """ +str(z2[0])+" " + str(z2[1]) + " " + str(z2[2])  +"""\n"""
+
+    ContentAtomStruct3="""\n create_atoms 2 region lower 
+group upper type 1 
+group lower type 2  
+replicate 1 1 1 \n"""
+
+    ContentInterPot="""\n # ---------- Define Interatomic Potential --------------------- 
+pair_style eam/alloy 
+pair_coeff * * """+str(potential)+" "+str(element)+ " "+str(element) +"""
+neighbor 2.0 bin 
+neigh_modify delay 10 check yes \n"""
+
+    ContentDisplace="""\n # ---------- Displace atoms and delete overlapping atoms --------------------- 
+displace_atoms upper move 0 0 0 units lattice 
+delete_atoms overlap 0.35 lower upper \n"""
+
+    ContentSettings="""\n # ---------- Define Settings --------------------- 
+compute csym all centro/atom fcc
+compute eng all pe/atom 
+compute eatoms all reduce sum c_eng 
+
+#write_dump all custom dump.img_orig.cfg mass type xs ys zs \n"""
+
+    ContentEquil="""\n # ----------- EQUILIBRATION --------------------
+write_dump all custom dump.img_pre_equil_"""+str(theta)+""".cfg mass type xs ys zs
+reset_timestep	0
+timestep 0.001
+velocity all create """+str(temp)+""" 12345 mom yes rot no
+fix 2 all npt temp """+ str(temp) + " " + str(temp)+ " " + str(tempDamp)+""" iso 0 0 1 drag 1 
+
+thermo 1000 
+thermo_style custom step temp pe lx ly lz press pxx pyy pzz c_eatoms 
+dump 5 all cfg 1000 dump.equal_*.cfg mass type xs ys zs c_csym c_eng fx fy fz
+dump_modify     5 element """+str(element)+" "+str(element) + """
+
+# Run for at least 10 picosecond (assuming 1 fs timestep)
+#write_dump all custom dump.img_post_equil.cfg mass type xs ys zs
+
+run 35000
+unfix 2
+\n"""
+
+    ContentMin1="""\n # ---------- Run Minimization --------------------- 
+write_dump all custom dump.img_post_equil_"""+str(theta)+""".cfg mass type xs ys zs 
+reset_timestep 0 
+thermo 10 
+thermo_style custom step pe lx ly lz press pxx pyy pzz c_eatoms 
+dump 		1 all cfg 25 dump.sig5_minimization_*.cfg mass type xs ys zs c_csym c_eng fx fy fz
+dump_modify     1 element """+str(element)+" "+str(element)+"""
+min_style cg 
+minimize 1e-15 1e-15 5000 5000 
+undump 1 \n"""
+
+    ContentMin2="""\n # ---------- Run Minimization 2--------------------- 
+# Now allow the box to expand/contract perpendicular to the grain boundary
+reset_timestep 0 
+thermo 10 
+thermo_style custom step pe lx ly lz press pxx pyy pzz c_eatoms 
+fix 1 all box/relax y 0 vmax 0.001
+min_style cg 
+minimize 1e-15 1e-15 5000 5000 \n"""
+
+    ContentGBEng="""\n # ---------- Calculate GB Energy --------------------- 
+variable minimumenergy equal -3.360000
+variable esum equal "v_minimumenergy * count(all)" 
+variable xseng equal "c_eatoms - (v_minimumenergy * count(all))" 
+variable gbarea equal "lx * lz * 2" 
+variable gbe equal "(c_eatoms - (v_minimumenergy * count(all)))/v_gbarea" 
+variable gbemJm2 equal ${gbe}*16021.7733 
+variable gbernd equal round(${gbemJm2}) 
+print "GB energy is ${gbemJm2} mJ/m^2" \n"""
+
+    ContentDumpData="""\n # ---------- Dump data into Data file ------------- 
+reset_timestep 0 
+dump 		1 all cfg 1000 dump.al_sig5_310_*.cfg mass type xs ys zs c_csym c_eng fx fy fz
+dump_modify     1 element """+str(element)+" "+str(element)+"""
+minimize 1e-15 1e-15 5000 5000
+undump 1
+
+write_restart restart.al_sig5_310_stgb
+write_dump all custom dump.img_post_minimize_"""+str(theta)+""".cfg mass type xs ys zs
+print "All done" \n"""
+
+    LammpsInFile.write(ContentComment)
+    LammpsInFile.write(ContentInitSim)
+    LammpsInFile.write(ContentAtomStruct1)
+    LammpsInFile.write(ContentAtomStruct2)
+    LammpsInFile.write(ContentAtomStruct3)
+    LammpsInFile.write(ContentInterPot)
+    LammpsInFile.write(ContentDisplace)
+    LammpsInFile.write(ContentSettings)
+    if(temp != 0):
+        LammpsInFile.write(ContentEquil)
+    LammpsInFile.write(ContentMin1)
+    LammpsInFile.write(ContentMin2)
+    LammpsInFile.write(ContentGBEng)
+    LammpsInFile.write(ContentDumpData)
+    
+    LammpsInFile.close()

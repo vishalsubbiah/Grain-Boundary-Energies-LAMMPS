@@ -1,0 +1,146 @@
+units metal
+dimension 3
+boundary p p p
+atom_style atomic
+variable latparam equal 4.22786
+
+# ---------- Create Atoms ---------------------
+lattice 	bcc ${latparam}
+lattice 	bcc 4.22786
+Lattice spacing in x,y,z = 4.22786 4.22786 4.22786
+region	whole block 0 10 0 10 0 10 units lattice
+create_box   1 whole
+Created orthogonal box = (0 0 0) to (42.2786 42.2786 42.2786)
+  1 by 2 by 2 MPI processor grid
+create_atoms 1 region whole
+Created 2000 atoms
+
+# ---------- Define Interatomic Potential ---------------------
+pair_style eam/alloy
+pair_coeff * * Na.eam.fs Na
+
+compute csym all centro/atom bcc
+compute eng all pe/atom
+compute eatoms all reduce sum c_eng
+
+ # ----------- EQUILIBRATION --------------------
+write_dump all custom dump.img_pre_equil.cfg mass type xs ys zs
+WARNING: Calling write_dump before a full system init. (../write_dump.cpp:81)
+reset_timestep	0
+timestep 0.001
+velocity all create 300 12345 mom yes rot no
+fix 2 all npt temp 300 300 0.01 iso 0 0 1 drag 1
+
+thermo 1000
+thermo_style custom step temp pe lx ly lz press pxx pyy pzz c_eatoms
+dump 5 all cfg 1000 dump.equal_*.cfg mass type xs ys zs c_csym c_eng fx fy fz
+dump_modify     5 element Na
+
+# Run for at least 10 picosecond (assuming 1 fs timestep)
+write_dump all custom dump.img_post_equil.cfg mass type xs ys zs
+WARNING: Calling write_dump before a full system init. (../write_dump.cpp:81)
+
+run 20000
+Neighbor list info ...
+  2 neighbor list requests
+  update every 1 steps, delay 10 steps, check yes
+  master list distance cutoff = 11.2
+  ghost atom cutoff = 11.2
+Memory usage per processor = 4.27045 Mbytes
+Step Temp PotEng Lx Ly Lz Press Pxx Pyy Pzz eatoms 
+       0          300    -2222.044      42.2786      42.2786      42.2786    1096.0901    1080.2358    1092.3589    1115.6757    -2222.044 
+    1000    298.01907   -2139.2743     43.04184     43.04184     43.04184   -8.3967242    48.732923   -24.298007   -49.625088   -2139.2743 
+    2000    299.75568   -2135.5737     43.07385     43.07385     43.07385   -1.0031973   -76.693195   -27.910015    101.59362   -2135.5737 
+    3000    299.89968   -2136.5018     43.06588     43.06588     43.06588    18.851307     177.6141   -6.8627415   -114.19743   -2136.5018 
+    4000    299.45794   -2136.8852    43.064416    43.064416    43.064416   -4.5272232    13.592809    17.696613   -44.871091   -2136.8852 
+    5000    300.26303   -2137.4497    43.088263    43.088263    43.088263   -120.03598   -156.58636   -59.179164   -144.34243   -2137.4497 
+    6000    300.08734   -2135.5437    43.052283    43.052283    43.052283    80.591634   -24.525457    95.406873    170.89349   -2135.5437 
+    7000    300.58964   -2136.0162    43.077858    43.077858    43.077858   -15.049212   -34.250123   -12.743769    1.8462563   -2136.0162 
+    8000    300.79599   -2137.5709    43.072363    43.072363    43.072363    5.7360425    36.567772   -21.614411    2.2547667   -2137.5709 
+    9000    299.31852   -2133.6215    43.074355    43.074355    43.074355    102.10534    87.160572     35.44073    183.71472   -2133.6215 
+   10000    300.18776   -2136.2568    43.088112    43.088112    43.088112   -25.124633   -85.722891    6.3757073    3.9732855   -2136.2568 
+   11000      300.664   -2135.9274    43.094175    43.094175    43.094175   -78.293972   -61.882226   -102.43003   -70.569662   -2135.9274 
+   12000    298.90033   -2135.8735    43.050913    43.050913    43.050913    148.89125    42.593081    122.32439    281.75627   -2135.8735 
+   13000    299.87682   -2137.1589    43.074241    43.074241    43.074241    -49.81927   -107.95826   -63.010308    21.510759   -2137.1589 
+   14000    300.21145   -2135.8922    43.086119    43.086119    43.086119   -25.931471   -34.503634   -23.691971   -19.598809   -2135.8922 
+   15000    300.91979   -2135.1614     43.09832     43.09832     43.09832    -74.37831   -45.291665   -88.354478   -89.488787   -2135.1614 
+   16000    299.97676   -2136.7784    43.059323    43.059323    43.059323    88.222944    62.767057    145.08094    56.820832   -2136.7784 
+   17000    300.49494    -2134.563    43.071902    43.071902    43.071902    58.826503    38.014898    103.97437    34.490235    -2134.563 
+   18000     299.8455   -2137.2169    43.067945    43.067945    43.067945    15.659846    34.584376    0.5482314     11.84693   -2137.2169 
+   19000    299.72874    -2138.297    43.066897    43.066897    43.066897   -14.043639   -104.38992    49.660678    12.598328    -2138.297 
+   20000    300.99693   -2136.6241    43.073253    43.073253    43.073253    8.7285501    27.649182   -96.910474    95.446943   -2136.6241 
+Loop time of 7470.14 on 4 procs for 20000 steps with 2000 atoms
+
+Pair  time (%) = 2320.76 (31.0671)
+Neigh time (%) = 4.11202 (0.0550461)
+Comm  time (%) = 3297.83 (44.1468)
+Outpt time (%) = 9.4735 (0.126818)
+Other time (%) = 1837.96 (24.6042)
+
+Nlocal:    500 ave 508 max 489 min
+Histogram: 1 0 0 0 1 0 0 0 1 1
+Nghost:    2861.25 ave 2875 max 2844 min
+Histogram: 1 0 0 0 0 1 1 0 0 1
+Neighs:    37634.8 ave 39423 max 36020 min
+Histogram: 1 0 0 1 0 1 0 0 0 1
+FullNghs:  75209 ave 76663 max 73214 min
+Histogram: 1 0 0 0 1 0 0 0 1 1
+
+Total # of neighbors = 300836
+Ave neighs/atom = 150.418
+Neighbor list builds = 269
+Dangerous builds = 0
+unfix 2
+write_dump all custom dump.img_post_equil.cfg mass type xs ys zs
+print "test1"
+test1
+
+# ---------- Run 0 ---------------------
+compute engperatom all pe/atom
+
+# ---------- Run 0 ---------------------
+thermo 1
+thermo_style custom step temp pe etotal
+dump 1 all custom 1 dump.atom.* id x y z c_engperatom
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Memory usage per processor = 5.66605 Mbytes
+Step Temp PotEng TotEng 
+   20000    300.99693   -2136.6241   -2058.8492 
+Loop time of 0.00297678 on 4 procs for 0 steps with 2000 atoms
+
+Pair  time (%) = 0 (0)
+Neigh time (%) = 0 (0)
+Comm  time (%) = 0 (0)
+Outpt time (%) = 0 (0)
+Other time (%) = 0.00297678 (100)
+
+Nlocal:    500 ave 510 max 488 min
+Histogram: 1 0 0 0 0 1 1 0 0 1
+Nghost:    2850.75 ave 2858 max 2841 min
+Histogram: 1 0 0 1 0 0 0 0 0 2
+Neighs:    37604.8 ave 39171 max 36070 min
+Histogram: 1 0 0 1 0 0 1 0 0 1
+FullNghs:  75209 ave 76663 max 73214 min
+Histogram: 1 0 0 0 1 0 0 0 1 1
+
+Total # of neighbors = 300836
+Ave neighs/atom = 150.418
+Neighbor list builds = 0
+Dangerous builds = 0
+
+variable natoms equal "count(all)"
+variable teng equal "pe"
+variable ecoh equal "v_teng/v_natoms"
+
+print "Total energy (eV) = ${teng};"
+Total energy (eV) = -2136.62408288337;
+print "Number of atoms = ${natoms};"
+Number of atoms = 2000;
+print "Cohesive energy (eV) = ${ecoh};"
+Cohesive energy (eV) = -1.06831204144169;
+print "%% ecoh = ${ecoh};"
+%% ecoh = -1.06831204144169;
+
+print "BAZINGAA"
+BAZINGAA

@@ -1,0 +1,9 @@
+The MATLAB folder contains the following scripts:
+
+angle.m: To find the orientations for the special grain boundaries
+specgrain.m: Plots related to the special grain boundaries
+Result.m: Some experimentation with the output (Not required for the results presented)
+PlotsAll.m: All other remaining plots
+
+The Python folder contains various folders with similar codes:
+To run the simulation, one must run RunLammps.py followed by ReadDump.py (for the experimentation done in Result.m (Not required for the results presented) 

@@ -1,0 +1,21 @@
+nData=[]
+AData=[]
+for i in range(0,1):
+    filename="dump.img_post_minimize_"+str(i)+".cfg"
+    with open(filename, 'r') as fileData:
+        for j in range(0,7):
+            if(j==3):             
+                nData.append(int(fileData.readline().strip()))
+            elif(j==6):
+                A=fileData.readline().strip().split(' ')
+                AData.append(float(A[0])*float(A[1])*-1)
+            else:
+                fileData.readline()
+print nData
+print AData
+
+filename = "AreaAtoms.txt"
+
+with open(filename, 'w') as fileData:
+    for i in range(0,1):
+        fileData.writelines(str(nData[i]) + " " + str(AData[i]) + "\n")

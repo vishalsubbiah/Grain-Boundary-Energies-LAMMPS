@@ -1,0 +1,79 @@
+units metal
+dimension 3
+boundary p p p
+atom_style atomic
+variable latparam equal 4.05
+
+# ---------- Create Atoms ---------------------
+lattice 	fcc ${latparam}
+lattice 	fcc 4.05
+Lattice spacing in x,y,z = 4.05 4.05 4.05
+region	whole block 0 10 0 10 0 10 units lattice
+create_box   1 whole
+Created orthogonal box = (0 0 0) to (40.5 40.5 40.5)
+  1 by 2 by 2 MPI processor grid
+create_atoms 1 region whole
+Created 4000 atoms
+
+# ---------- Define Interatomic Potential ---------------------
+pair_style eam/alloy
+pair_coeff * * Al99.eam.alloy Al
+
+compute csym all centro/atom fcc
+compute eng all pe/atom
+compute eatoms all reduce sum c_eng
+
+# ---------- Run 0 ---------------------
+compute engperatom all pe/atom
+
+# ---------- Run 0 ---------------------
+thermo 1
+thermo_style custom step temp pe etotal
+dump 1 all custom 1 dump.atom.* id x y z c_engperatom
+run 0
+WARNING: No fixes defined, atoms won't move (../verlet.cpp:55)
+Neighbor list info ...
+  2 neighbor list requests
+  update every 1 steps, delay 10 steps, check yes
+  master list distance cutoff = 8.28721
+  ghost atom cutoff = 8.28721
+Memory usage per processor = 4.20616 Mbytes
+Step Temp PotEng TotEng 
+       0            0       -13440       -13440 
+Loop time of 5.48363e-06 on 4 procs for 0 steps with 4000 atoms
+
+Pair  time (%) = 0 (0)
+Neigh time (%) = 0 (0)
+Comm  time (%) = 0 (0)
+Outpt time (%) = 0 (0)
+Other time (%) = 5.48363e-06 (100)
+
+Nlocal:    1000 ave 1000 max 1000 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Nghost:    4235 ave 4235 max 4235 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Neighs:    70000 ave 72653 max 67302 min
+Histogram: 1 0 1 0 0 0 0 1 0 1
+FullNghs:  0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+
+Total # of neighbors = 280000
+Ave neighs/atom = 70
+Neighbor list builds = 0
+Dangerous builds = 0
+
+variable natoms equal "count(all)"
+variable teng equal "pe"
+variable ecoh equal "v_teng/v_natoms"
+
+print "Total energy (eV) = ${teng};"
+Total energy (eV) = -13439.999952531;
+print "Number of atoms = ${natoms};"
+Number of atoms = 4000;
+print "Cohesive energy (eV) = ${ecoh};"
+Cohesive energy (eV) = -3.35999998813275;
+print "%% ecoh = ${ecoh};"
+%% ecoh = -3.35999998813275;
+
+print "BAZINGAA"
+BAZINGAA
